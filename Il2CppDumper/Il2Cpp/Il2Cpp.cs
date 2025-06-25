@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 namespace Il2CppDumper
 {
     public abstract class Il2Cpp : BinaryStream
     {
+        private static Config config;
+
         private Il2CppMetadataRegistration pMetadataRegistration;
         private Il2CppCodeRegistration pCodeRegistration;
         public ulong[] methodPointers;
@@ -40,7 +43,9 @@ namespace Il2CppDumper
         public abstract SectionHelper GetSectionHelper(int methodCount, int typeDefinitionsCount, int imageCount);
         public abstract bool CheckDump();
 
-        protected Il2Cpp(Stream stream) : base(stream) { }
+        protected Il2Cpp(Stream stream) : base(stream) {
+            config = JsonSerializer.Deserialize<Config>(File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + @"config.json"));
+        }
 
         public void SetProperties(double version, long metadataUsagesCount)
         {
@@ -64,26 +69,47 @@ namespace Il2CppDumper
                         }
                         else
                         {
-                            Version = 29;
-                            Console.WriteLine($"Change il2cpp version to: {Version}");
+                            if (!config.ForceIl2CppVersion)
+                            {
+                                Version = 29;
+                                Console.WriteLine($"Change il2cpp version to: {Version}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("It would switch to version 29, but ForceIl2CppVersion blocks it.");
+                            }
                         }
                     }
                     if (Version == 29)
                     {
                         if (pCodeRegistration.genericMethodPointersCount > limit)
                         {
-                            Version = 29.1;
-                            codeRegistration -= PointerSize * 2;
-                            Console.WriteLine($"Change il2cpp version to: {Version}");
+                            if (!config.ForceIl2CppVersion)
+                            {
+                                Version = 29.1;
+                                codeRegistration -= PointerSize * 2;
+                                Console.WriteLine($"Change il2cpp version to: {Version}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("It would switch to version 29.1, but ForceIl2CppVersion blocks it.");
+                            }
                         }
                     }
                     if (Version == 27)
                     {
                         if (pCodeRegistration.reversePInvokeWrapperCount > limit)
                         {
-                            Version = 27.1;
-                            codeRegistration -= PointerSize;
-                            Console.WriteLine($"Change il2cpp version to: {Version}");
+                            if (!config.ForceIl2CppVersion)
+                            {
+                                Version = 27.1;
+                                codeRegistration -= PointerSize;
+                                Console.WriteLine($"Change il2cpp version to: {Version}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("It would switch to version 27.1, but ForceIl2CppVersion blocks it.");
+                            }
                         }
                     }
                     if (Version == 24.4)
@@ -91,18 +117,32 @@ namespace Il2CppDumper
                         codeRegistration -= PointerSize * 2;
                         if (pCodeRegistration.reversePInvokeWrapperCount > limit)
                         {
-                            Version = 24.5;
-                            codeRegistration -= PointerSize;
-                            Console.WriteLine($"Change il2cpp version to: {Version}");
+                            if (!config.ForceIl2CppVersion)
+                            {
+                                Version = 24.5;
+                                codeRegistration -= PointerSize;
+                                Console.WriteLine($"Change il2cpp version to: {Version}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("It would switch to version 24.5, but ForceIl2CppVersion blocks it.");
+                            }
                         }
                     }
                     if (Version == 24.2)
                     {
                         if (pCodeRegistration.interopDataCount == 0) //TODO
                         {
-                            Version = 24.3;
-                            codeRegistration -= PointerSize * 2;
-                            Console.WriteLine($"Change il2cpp version to: {Version}");
+                            if (!config.ForceIl2CppVersion)
+                            {
+                                Version = 24.3;
+                                codeRegistration -= PointerSize * 2;
+                                Console.WriteLine($"Change il2cpp version to: {Version}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("It would switch to version 24.3, but ForceIl2CppVersion blocks it.");
+                            }
                         }
                     }
                 }
@@ -123,9 +163,16 @@ namespace Il2CppDumper
             var limit = this is WebAssemblyMemory ? 0x35000u : 0x50000u; //TODO
             if (Version == 27 && pCodeRegistration.invokerPointersCount > limit)
             {
-                Version = 27.1;
-                Console.WriteLine($"Change il2cpp version to: {Version}");
-                pCodeRegistration = MapVATR<Il2CppCodeRegistration>(codeRegistration);
+                if (!config.ForceIl2CppVersion)
+                {
+                    Version = 27.1;
+                    Console.WriteLine($"Change il2cpp version to: {Version}");
+                    pCodeRegistration = MapVATR<Il2CppCodeRegistration>(codeRegistration);
+                }
+                else
+                {
+                    Console.WriteLine("It would switch to version 27.1, but ForceIl2CppVersion blocks it.");
+                }
             }
             if (Version == 27.1)
             {
@@ -138,8 +185,15 @@ namespace Il2CppDumper
                         var rgctxs = MapVATR<Il2CppRGCTXDefinition>(codeGenModule.rgctxs, codeGenModule.rgctxsCount);
                         if (rgctxs.All(x => x.data.rgctxDataDummy > limit))
                         {
-                            Version = 27.2;
-                            Console.WriteLine($"Change il2cpp version to: {Version}");
+                            if (!config.ForceIl2CppVersion)
+                            {
+                                Version = 27.2;
+                                Console.WriteLine($"Change il2cpp version to: {Version}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("It would switch to version 27.2, but ForceIl2CppVersion blocks it.");
+                            }
                         }
                         break;
                     }
@@ -147,15 +201,29 @@ namespace Il2CppDumper
             }
             if (Version == 24.4 && pCodeRegistration.invokerPointersCount > limit)
             {
-                Version = 24.5;
-                Console.WriteLine($"Change il2cpp version to: {Version}");
-                pCodeRegistration = MapVATR<Il2CppCodeRegistration>(codeRegistration);
+                if (!config.ForceIl2CppVersion)
+                {
+                    Version = 24.5;
+                    Console.WriteLine($"Change il2cpp version to: {Version}");
+                    pCodeRegistration = MapVATR<Il2CppCodeRegistration>(codeRegistration);
+                }
+                else
+                {
+                    Console.WriteLine("It would switch to version 24.5, but ForceIl2CppVersion blocks it.");
+                }
             }
             if (Version == 24.2 && pCodeRegistration.codeGenModules == 0) //TODO
             {
-                Version = 24.3;
-                Console.WriteLine($"Change il2cpp version to: {Version}");
-                pCodeRegistration = MapVATR<Il2CppCodeRegistration>(codeRegistration);
+                if (!config.ForceIl2CppVersion)
+                {
+                    Version = 24.3;
+                    Console.WriteLine($"Change il2cpp version to: {Version}");
+                    pCodeRegistration = MapVATR<Il2CppCodeRegistration>(codeRegistration);
+                }
+                else
+                {
+                    Console.WriteLine("It would switch to version 24.3, but ForceIl2CppVersion blocks it.");
+                }
             }
             pMetadataRegistration = MapVATR<Il2CppMetadataRegistration>(metadataRegistration);
             genericMethodPointers = MapVATR<ulong>(pCodeRegistration.genericMethodPointers, pCodeRegistration.genericMethodPointersCount);
