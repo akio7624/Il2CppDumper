@@ -8,7 +8,7 @@ namespace Il2CppDumper
 {
     public abstract class Il2Cpp : BinaryStream
     {
-        private static Config config;
+        protected static Config config;
 
         private Il2CppMetadataRegistration pMetadataRegistration;
         private Il2CppCodeRegistration pCodeRegistration;
@@ -160,6 +160,8 @@ namespace Il2CppDumper
         public virtual void Init(ulong codeRegistration, ulong metadataRegistration)
         {
             pCodeRegistration = MapVATR<Il2CppCodeRegistration>(codeRegistration);
+            // Console.WriteLine($"[DEBUG] genericMethodPointers: {pCodeRegistration.genericMethodPointers:X}");
+            // Console.WriteLine($"[DEBUG] invokerPointers: {pCodeRegistration.invokerPointers:X}");
             var limit = this is WebAssemblyMemory ? 0x35000u : 0x50000u; //TODO
             if (Version == 27 && pCodeRegistration.invokerPointersCount > limit)
             {

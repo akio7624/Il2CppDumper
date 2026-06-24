@@ -233,6 +233,15 @@ namespace Il2CppDumper
                     var codeRegistration = Convert.ToUInt64(Console.ReadLine(), 16);
                     Console.Write("Input MetadataRegistration: ");
                     var metadataRegistration = Convert.ToUInt64(Console.ReadLine(), 16);
+
+                    if (config.AddBaseToRegistration)
+                    {
+                        codeRegistration += il2Cpp.ImageBase;
+                        metadataRegistration += il2Cpp.ImageBase;
+                        Console.WriteLine($"Calculated CodeRegistration: {codeRegistration:X}");
+                        Console.WriteLine($"Calculated MetadataRegistration: {metadataRegistration:X}");
+                    }
+
                     il2Cpp.Init(codeRegistration, metadataRegistration);
                 }
                 if (il2Cpp.Version >= 27 && il2Cpp.IsDumped)

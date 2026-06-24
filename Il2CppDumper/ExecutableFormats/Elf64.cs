@@ -70,6 +70,13 @@ namespace Il2CppDumper
 
         public override ulong MapVATR(ulong addr)
         {
+            // If the binary is dumped from memory and addr is less than ImageBase,
+            // add ImageBase to addr.
+            if (config.TryFixDumpRVA && IsDumped && addr > 0 && addr < ImageBase)
+            {
+                addr += ImageBase;
+            }
+
             var phdr = programSegment.First(x => addr >= x.p_vaddr && addr <= x.p_vaddr + x.p_memsz);
             return addr - phdr.p_vaddr + phdr.p_offset;
         }
