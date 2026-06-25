@@ -261,7 +261,20 @@ namespace Il2CppDumper
         {
             if (IsDumped)
             {
-                return pointer - ImageBase;
+                /*
+                 * Gemini:
+                 * FIX: Prevent underflow when calculating RVA.
+                 * If the pointer is already smaller than ImageBase, it indicates that 
+                 * the method pointer array stored relative offsets (RVA) instead of 
+                 * absolute runtime virtual addresses (VA).
+                 */
+                if (pointer >= ImageBase)
+                {
+                    return pointer - ImageBase;
+                }
+
+                // 이미 상대 주소(RVA/Offset) 형태라면 그대로 반환
+                return pointer;
             }
             return pointer;
         }

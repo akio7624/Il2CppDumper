@@ -362,3 +362,4 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /Il2CppDumper/Properties/launchSettings.json
+/Il2CppDumper/config.json
