@@ -244,11 +244,29 @@ namespace Il2CppDumper
 
                     il2Cpp.Init(codeRegistration, metadataRegistration);
                 }
+
+                 /*
+                 * Gemini:
+                 * FIX: In Unity v27+ memory dumps, types may be partially initialized.
+                 * Uninitialized types contain a raw index rather than a runtime memory pointer.
+                 * To prevent integer underflow and incorrect ImageBase calculation, we iterate 
+                 * through typeDefs until we find a fully initialized type (heuristic: value > 0x100000).
+                 * This safely guarantees a reliable reference point to calculate the ImageBase.
+                 */
                 if (il2Cpp.Version >= 27 && il2Cpp.IsDumped)
                 {
-                    var typeDef = metadata.typeDefs[0];
-                    var il2CppType = il2Cpp.types[typeDef.byvalTypeIndex];
-                    metadata.ImageBase = il2CppType.data.typeHandle - metadata.header.typeDefinitionsOffset;
+                    for (int i = 0; i < metadata.typeDefs.Length; i++)
+                    {
+                        var typeDef = metadata.typeDefs[i];
+                        var il2CppType = il2Cpp.types[typeDef.byvalTypeIndex];
+
+                        if (il2CppType.data.typeHandle > 0x100000)
+                        {
+                            var offset = (ulong)i * (ulong)metadata.SizeOf(typeof(Il2CppTypeDefinition));
+                            metadata.ImageBase = il2CppType.data.typeHandle - offset - metadata.header.typeDefinitionsOffset;
+                            break;
+                        }
+                    }
                 }
             }
             catch (Exception e)

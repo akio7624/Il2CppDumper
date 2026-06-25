@@ -290,13 +290,29 @@ namespace Il2CppDumper
             return metadata.typeDefs[genericClass.typeDefinitionIndex];
         }
 
+        /*
+        * Gemini:
+        * FIX: Handle mixed data states in Unity v27+ memory dumps.
+        * At runtime, Il2CppType.data replaces 'klassIndex' with a 'typeHandle' (memory pointer).
+        * We use a threshold (> 0x100000) to check if the type has been initialized.
+        * - If true, it's a runtime pointer: we calculate the index using the ImageBase offset.
+        * - If false, it's uninitialized: we safely use the value directly as a raw index.
+        */
         public Il2CppTypeDefinition GetTypeDefinitionFromIl2CppType(Il2CppType il2CppType)
         {
             if (il2Cpp.Version >= 27 && il2Cpp.IsDumped)
             {
-                var offset = il2CppType.data.typeHandle - metadata.ImageBase - metadata.header.typeDefinitionsOffset;
-                var index = offset / (ulong)metadata.SizeOf(typeof(Il2CppTypeDefinition));
-                return metadata.typeDefs[index];
+                // 값이 충분히 크면 런타임 포인터로 간주
+                if (il2CppType.data.typeHandle > 0x100000)
+                {
+                    var offset = il2CppType.data.typeHandle - metadata.ImageBase - metadata.header.typeDefinitionsOffset;
+                    var index = offset / (ulong)metadata.SizeOf(typeof(Il2CppTypeDefinition));
+                    return metadata.typeDefs[index];
+                }
+                else // 아직 초기화되지 않았다면 원본 klassIndex로 사용
+                {
+                    return metadata.typeDefs[il2CppType.data.klassIndex];
+                }
             }
             else
             {
@@ -304,13 +320,28 @@ namespace Il2CppDumper
             }
         }
 
+        /*
+        * Gemini:
+        * FIX: Handle mixed data states for generic parameters in Unity v27+ memory dumps.
+        * Similar to type definitions, we check if the genericParameterHandle is a 
+        * valid memory pointer (> 0x100000) or an uninitialized raw index.
+        * This prevents IndexOutOfRangeException by dynamically applying the correct 
+        * retrieval logic based on the initialization state of the generic data.
+        */
         public Il2CppGenericParameter GetGenericParameteFromIl2CppType(Il2CppType il2CppType)
         {
             if (il2Cpp.Version >= 27 && il2Cpp.IsDumped)
             {
-                var offset = il2CppType.data.genericParameterHandle - metadata.ImageBase - metadata.header.genericParametersOffset;
-                var index = offset / (ulong)metadata.SizeOf(typeof(Il2CppGenericParameter));
-                return metadata.genericParameters[index];
+                if (il2CppType.data.genericParameterHandle > 0x100000)
+                {
+                    var offset = il2CppType.data.genericParameterHandle - metadata.ImageBase - metadata.header.genericParametersOffset;
+                    var index = offset / (ulong)metadata.SizeOf(typeof(Il2CppGenericParameter));
+                    return metadata.genericParameters[index];
+                }
+                else
+                {
+                    return metadata.genericParameters[il2CppType.data.genericParameterIndex];
+                }
             }
             else
             {
