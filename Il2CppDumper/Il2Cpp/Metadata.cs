@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Il2CppDumper
 {
-    public sealed class Metadata : BinaryStream
+    public sealed partial class Metadata : BinaryStream
     {
         public Il2CppGlobalMetadataHeader header;
         public Il2CppImageDefinition[] imageDefs;
@@ -16,12 +16,12 @@ namespace Il2CppDumper
         public Il2CppMethodDefinition[] methodDefs;
         public Il2CppParameterDefinition[] parameterDefs;
         public Il2CppFieldDefinition[] fieldDefs;
-        private readonly Dictionary<int, Il2CppFieldDefaultValue> fieldDefaultValuesDic;
-        private readonly Dictionary<int, Il2CppParameterDefaultValue> parameterDefaultValuesDic;
+        private Dictionary<int, Il2CppFieldDefaultValue> fieldDefaultValuesDic;
+        private Dictionary<int, Il2CppParameterDefaultValue> parameterDefaultValuesDic;
         public Il2CppPropertyDefinition[] propertyDefs;
         public Il2CppCustomAttributeTypeRange[] attributeTypeRanges;
         public Il2CppCustomAttributeDataRange[] attributeDataRanges;
-        private readonly Dictionary<Il2CppImageDefinition, Dictionary<uint, int>> attributeTypeRangesDic;
+        private Dictionary<Il2CppImageDefinition, Dictionary<uint, int>> attributeTypeRangesDic;
         public Il2CppStringLiteral[] stringLiterals;
         private readonly Il2CppMetadataUsageList[] metadataUsageLists;
         private readonly Il2CppMetadataUsagePair[] metadataUsagePairs;
@@ -52,11 +52,16 @@ namespace Il2CppDumper
             {
                 throw new InvalidDataException("ERROR: Metadata file supplied is not valid metadata file.");
             }
-            if (version < 16 || version > 31)
+            if (version < 16 || (version > 31 && version != 39))
             {
                 throw new NotSupportedException($"ERROR: Metadata file supplied is not a supported version[{version}].");
             }
             Version = version;
+            if (version == 39)
+            {
+                InitV39();
+                return;
+            }
             header = ReadClass<Il2CppGlobalMetadataHeader>(0);
             if (version == 24)
             {
@@ -255,6 +260,10 @@ namespace Il2CppDumper
 
         public int SizeOf(Type type)
         {
+            if (v39Sizes.TryGetValue(type, out var v39Size))
+            {
+                return v39Size;
+            }
             var size = 0;
             foreach (var i in type.GetFields())
             {
